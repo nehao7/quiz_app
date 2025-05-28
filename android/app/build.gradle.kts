@@ -15,6 +15,8 @@ android {
 //    ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+//        coreLibraryDesugaringEnabled true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -42,6 +44,17 @@ android {
         }
     }
 }
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+//dependencies {
+//    // For AGP 7.4+
+//    coreLibraryDesugaring ("com.android.tools:desugar_jdk_libs:2.1.4")
+//    // For AGP 7.3
+//    // coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.3'
+//    // For AGP 4.0 to 7.2
+//    // coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.9'
+//}
 
 flutter {
     source = "../.."
