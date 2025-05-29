@@ -19,7 +19,7 @@ class _WebPlusNotificationState extends State<WebPlusNotification> {
   ];
 
   final _titles = [
-    "Web View",
+    "O7 Quiz",
     "Notifications",
   ];
   @override
@@ -28,6 +28,8 @@ class _WebPlusNotificationState extends State<WebPlusNotification> {
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
         centerTitle: true,
+        backgroundColor: Colors.blueGrey,
+        titleTextStyle: TextStyle(color: Colors.white,fontSize: 24,fontWeight: FontWeight.bold),
       ),
       body: IndexedStack(
         index: _currentIndex,
@@ -40,7 +42,7 @@ class _WebPlusNotificationState extends State<WebPlusNotification> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.web),
-            label: 'WebView',
+            label: 'O7 Quizz',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
