@@ -1,7 +1,11 @@
+import 'dart:ui';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:intl/intl.dart';
 import 'package:readmore/readmore.dart';
 
@@ -12,13 +16,65 @@ class NotificationScreen extends StatefulWidget {
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
+
 Future<void> saveNotification(NotificationItem notification) async {
   await FirebaseFirestore.instance
       .collection('notifications')
       .add(notification.toMap());
 }
+
 class _NotificationScreenState extends State<NotificationScreen> {
   final List<Map<String, String>> _notifications = [];
+//   final service = FlutterBackgroundService();
+//   void initializeBackgroundService() async {
+//     try {
+//       // Initialize the background service
+//       await service.initialize(onDataReceived: onDataReceivedFromBackground);
+// // Perform any necessary configurations for iOS
+//       configureIOSBackgroundService();
+// // Start the background service
+//       service.start(onStart: () {
+//         print('Background service started');
+//       }, onBackgroundTask: (String data) {
+//         // Your background task code
+//         print('Background task started with data: $data');
+//         service.sendData('Background task completed');
+//       });
+//     } catch (e) {
+//       print('Error initializing background service: $e');
+//     }
+//   }
+// //
+
+  void onStart(ServiceInstance service) async {
+    DartPluginRegistrant.ensureInitialized();
+    await Firebase.initializeApp();
+
+    service.on('save_notification').listen((event) async {
+      final now = DateTime.now();
+      final formattedTime = DateFormat('dd-MMM-yyyy hh:mm a').format(now);
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'title': event?['title'] ?? 'No Title',
+        'body': event?['body'] ?? 'No Body',
+        'time': formattedTime,
+      });
+    });
+  }
+
+// Initialize background service
+  Future<void> initializeService() async {
+    await FlutterBackgroundService().configure(
+      androidConfiguration: AndroidConfiguration(
+        onStart: onStart,
+        autoStart: true,
+        isForegroundMode: true,
+      ),
+      iosConfiguration: IosConfiguration(
+        autoStart: true,
+        onForeground: onStart,
+      ),
+    );
+  }
 
   Stream<List<NotificationItem>> getNotifications() {
     return FirebaseFirestore.instance
@@ -68,11 +124,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final formattedTime = DateFormat(
         'dd-MMM-yyyy  hh:mm a',
       ).format(now);
+      if(!mounted) return;
       setState(() {
         _notifications.insert(0, {
           'title': title,
           'body': body,
           'time': formattedTime,
+        });
+        FlutterBackgroundService().invoke('save_notification',{
+          'title': message.notification?.title ?? 'No Title',
+          'body': message.notification?.body ?? 'No Body',
         });
         final notif = NotificationItem(
           title: title,
@@ -80,6 +141,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           time: DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
         );
         saveNotification(notif);
+        print("$_notifications");
       });
     });
   }
