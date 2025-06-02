@@ -10,22 +10,23 @@ import 'NotificationScreen.dart';
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationService.instance.setupFlutterNotifications();
   await NotificationService.instance.showNotification(message);
-  await saveNotification(message);
-  try {
-    final title = message.notification?.title ?? 'No Title';
-    final body = message.notification?.body ?? 'No Body';
-    final timestamp = DateTime.now().toIso8601String();
-
-    await FirebaseFirestore.instance.collection('notifications').add({
-      'title': title,
-      'body': body,
-      'time': DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
-    });
-    print("Background notification saved.");
-  } catch (e, stack) {
-    print("🔥 Error in background handler: $e");
-    print(stack);
-  }
+  // await Firebase.initializeApp();
+  // await savedNotification(message);
+  // try {
+  //   final title = message.notification?.title ?? 'No Title';
+  //   final body = message.notification?.body ?? 'No Body';
+  //   final timestamp = DateTime.now().toIso8601String();
+  //
+  //   await FirebaseFirestore.instance.collection('notifications').add({
+  //     'title': title,
+  //     'body': body,
+  //     'time': DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
+  //   });
+  //   print("Background notification saved.");
+  // } catch (e, stack) {
+  //   print("🔥 Error in background handler: $e");
+  //   print(stack);
+  // }
   // final notification = message.notification;
   // await Firebase.initializeApp(); // required
   // final notif = NotificationItem(
@@ -36,7 +37,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // await FirebaseFirestore.instance.collection('notifications').add(notif.toMap());
   // print("Background notification saved.");
 }
-Future<void> saveNotification(RemoteMessage message) async {
+Future<void> savedNotification(RemoteMessage message) async {
   final now = DateTime.now();
   final formattedTime = DateFormat('dd-MMM-yyyy hh:mm a').format(now);
   await FirebaseFirestore.instance.collection('notifications').add({

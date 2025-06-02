@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -9,14 +10,33 @@ void main() async {
   await Firebase.initializeApp();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  runApp(const MyApp());
+  final message = await FirebaseMessaging.instance.getInitialMessage();
+
+  // Get the notification that opened the app (if any)
+  RemoteMessage? initialMessage =
+  await FirebaseMessaging.instance.getInitialMessage();
+
+  runApp(MyApp(initialMessage: initialMessage));
 }
+//   runApp(const MyApp());
+// }
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print('Background message: ${message.messageId}');
+
+
+  final title = message.notification?.title ?? 'No Title';
+  final body = message.notification?.body ?? 'No Body';
+  final time = DateTime.now().toString(); // Optional: format if needed
+
+  await FirebaseFirestore.instance.collection('notifications').add({
+    'title': title,
+    'body': body,
+    'time': time,
+  });
 }
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, RemoteMessage? initialMessage});
 
   // This widget is the root of your application.
   @override

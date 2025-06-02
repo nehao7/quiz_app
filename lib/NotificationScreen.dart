@@ -5,26 +5,28 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
+// import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:intl/intl.dart';
 import 'package:readmore/readmore.dart';
 
+import 'notification_services.dart';
+
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({super.key});
+  final RemoteMessage? initialMessage;
+  const NotificationScreen({super.key,this.initialMessage});
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
 
-Future<void> saveNotification(NotificationItem notification) async {
-  await FirebaseFirestore.instance
-      .collection('notifications')
-      .add(notification.toMap());
-}
+// Future<void> saveNotification(NotificationItem notification) async {
+//   await FirebaseFirestore.instance
+//       .collection('notifications')
+//       .add(notification.toMap());
+// }
 
-class _NotificationScreenState extends State<NotificationScreen> {
-  final List<Map<String, String>> _notifications = [];
+
 //   final service = FlutterBackgroundService();
 //   void initializeBackgroundService() async {
 //     try {
@@ -45,36 +47,41 @@ class _NotificationScreenState extends State<NotificationScreen> {
 //     }
 //   }
 // //
+class _NotificationScreenState extends State<NotificationScreen> {
+  final List<Map<String, String>> _notifications = [];
 
-  void onStart(ServiceInstance service) async {
-    DartPluginRegistrant.ensureInitialized();
-    await Firebase.initializeApp();
-
-    service.on('save_notification').listen((event) async {
-      final now = DateTime.now();
-      final formattedTime = DateFormat('dd-MMM-yyyy hh:mm a').format(now);
-      await FirebaseFirestore.instance.collection('notifications').add({
-        'title': event?['title'] ?? 'No Title',
-        'body': event?['body'] ?? 'No Body',
-        'time': formattedTime,
-      });
-    });
-  }
+  // void onStart(ServiceInstance service) async {
+  //   DartPluginRegistrant.ensureInitialized();
+  //   await Firebase.initializeApp();
+  //
+  //   service.on('save_notification').listen((event) async {
+  //     final now = DateTime.now();
+  //     final formattedTime = DateFormat('dd-MMM-yyyy hh:mm a').format(now);
+  //     await FirebaseFirestore.instance.collection('notifications').add({
+  //       'title': event?['title'] ?? 'No Title',
+  //       'body': event?['body'] ?? 'No Body',
+  //       'time': formattedTime,
+  //     });
+  //   });
+  // }
 
 // Initialize background service
-  Future<void> initializeService() async {
-    await FlutterBackgroundService().configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: onStart,
-        autoStart: true,
-        isForegroundMode: true,
-      ),
-      iosConfiguration: IosConfiguration(
-        autoStart: true,
-        onForeground: onStart,
-      ),
-    );
-  }
+//   Future<void> initializeService() async {
+//     final service=FlutterBackgroundService();
+//     await service.configure(
+//       androidConfiguration: AndroidConfiguration(
+//         onStart: onStart,
+//         autoStart: true,
+//         isForegroundMode: true,
+//       ),
+//       iosConfiguration: IosConfiguration(
+//         autoStart: true,
+//         onForeground: onStart,
+//       ),
+//     );
+//     service.startService();
+//
+//   }
 
   Stream<List<NotificationItem>> getNotifications() {
     return FirebaseFirestore.instance
@@ -87,64 +94,71 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
 
-    FirebaseMessaging.instance.getToken().then((token) {
-      print("FCM Token: $token");
+    if (widget.initialMessage != null) {
+      saveNotification(widget.initialMessage!); // Save safely now
+    }
+
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      saveNotification(message); // OK since UI is ready
     });
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final title = message.notification?.title ?? 'No Title';
-      final body = message.notification?.body ?? 'No Body';
-      final now = DateTime.now();
-      final formattedTime = DateFormat(
-        'dd-MMM-yyyy  hh:mm a',
-      ).format(now); // e.g., 02:45 PM
-      setState(() {
-        _notifications.insert(0, {
-          'title': title,
-          'body': body,
-          'time': formattedTime,
-        });
-        final notif = NotificationItem(
-          title: title,
-          body: body,
-          time: DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
-        );
-        saveNotification(notif);
-      });
-      print("List: $_notifications");
-      print(' Message received in foreground: ${message.notification?.title}');
-      print('Data : ${message.data}');
-    });
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Message opened from background: ${message.data}');
-      print('${message.notification?.title ?? 'No Title'}');
-      print('${message.notification?.body ?? 'No body'}');
-      final title = message.notification?.title ?? 'No Title';
-      final body = message.notification?.body ?? 'No Body';
-      final now = DateTime.now();
-      final formattedTime = DateFormat(
-        'dd-MMM-yyyy  hh:mm a',
-      ).format(now);
-      if(!mounted) return;
-      setState(() {
-        _notifications.insert(0, {
-          'title': title,
-          'body': body,
-          'time': formattedTime,
-        });
-        FlutterBackgroundService().invoke('save_notification',{
-          'title': message.notification?.title ?? 'No Title',
-          'body': message.notification?.body ?? 'No Body',
-        });
-        final notif = NotificationItem(
-          title: title,
-          body: body,
-          time: DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
-        );
-        saveNotification(notif);
-        print("$_notifications");
-      });
+
+    FirebaseMessaging.onMessage.listen((message) {
+      saveNotification(message);
     });
   }
+
+  void saveNotification(RemoteMessage message) async {
+    final title = message.notification?.title ?? 'No Title';
+    final body = message.notification?.body ?? 'No Body';
+    final time = DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now());
+
+    await FirebaseFirestore.instance.collection('notifications').add({
+      'title': title,
+      'body': body,
+      'time': time,
+    });
+  }
+
+
+// FirebaseMessaging.instance.getToken().then((token) {
+    //   print("FCM Token: $token");
+    // });
+    // FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    //   savedNotification(message);
+    //
+    //   //   final notif = NotificationItem(
+    //   //     title: title,
+    //   //     body: body,
+    //   //     time: DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
+    //   //   );
+    //   //   saveNotification(notif);
+    //   // });
+    //   // print("List: $_notifications");
+    //   // print(' Message received in foreground: ${message.notification?.title}');
+    //   // print('Data : ${message.data}');
+    // });
+    // FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    //   print('Message opened from background: ${message.data}');
+    //   print('${message.notification?.title ?? 'No Title'}');
+    //   print('${message.notification?.body ?? 'No body'}');
+    //
+    //   //   FlutterBackgroundService().invoke('save_notification',{
+    //   //     'title': message.notification?.title ?? 'No Title',
+    //   //     'body': message.notification?.body ?? 'No Body',
+    //   //   });
+    //     // final notif = NotificationItem(
+    //     //   title: title,
+    //     //   body: body,
+    //     //   time: DateFormat('dd-MMM-yyyy hh:mm a').format(DateTime.now()),
+    //     // );
+    //
+    //     if(message.notification!=null){
+    //     savedNotification(message);
+    //     print("$_notifications");
+    //     }
+    //   });
+    // // });
+
 
   @override
   Widget build(BuildContext context) {
